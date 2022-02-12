@@ -1,0 +1,37 @@
+#version 400 core
+//written in GLSL
+
+// "in" annotates the variable is input and constant for a constant object
+in vec3 position; // position of the edges
+in vec2 textureCoordinates; // corresponding texture coordinate
+in vec3 normal; // normals of the edges
+
+// "out" annotates the variable is output to the fragment shader
+out vec2 pass_textureCoordinates;
+out vec3 surfaceNormal;
+out vec3 toLightVector;
+out vec3 toCameraVector;
+
+// "uniform" annotates the variable is input and can altered any time by java code
+uniform mat4 transformationMatrix; // translation, orientation and scale of the current object
+uniform mat4 projectionMatrix; // projects the field of view -> objects in the distance are smaller, etc.
+uniform mat4 viewMatrix; // applies opposite transformation the camera is subjected to -> "moves/rotates" the world
+uniform vec3 lightPosition;
+uniform float useFakeLighting;
+
+void main(void){
+    vec4 worldPosition = transformationMatrix * vec4(position, 1.0); // applies transformation to object
+    gl_Position = projectionMatrix * viewMatrix * worldPosition; // applies projection and camera movement to object
+    pass_textureCoordinates = textureCoordinates;
+
+    vec3 actualNormal = normal;
+    if (useFakeLighting > 0.5){
+         actualNormal = vec3(0.0, 1.0, 0.0);
+    }
+
+    surfaceNormal = (transformationMatrix * vec4(actualNormal, 0.0)).xyz; // applies transformation to object
+    toLightVector = lightPosition - worldPosition.xyz;
+    toCameraVector = (inverse(viewMatrix) * vec4(0.0, 0.0, 0.0, 1.0)).xyz - worldPosition.xyz;
+
+}
+

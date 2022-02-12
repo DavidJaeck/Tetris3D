@@ -1,0 +1,44 @@
+#version 400 core
+//written in GLSL
+
+// "in" annotates the variable is input and constant for a constant object
+in vec2 pass_textureCoordinates; // corresponding texture coordinate
+in vec3 surfaceNormal; // normals of the surfaces
+in vec3 toLightVector;
+in vec3 toCameraVector;
+
+// "out" annotates the variable is output to the display
+out vec4 out_Color; // this is always a color shaders for sound would also be possible
+
+// "uniform" annotates the variable is input and can altered any time by java code
+uniform sampler2D modelTexture;
+uniform vec3 lightColor;
+uniform float shineDamper;
+uniform float reflectivity;
+
+void main(void){
+    // calculate necessary vectors
+    vec3 unitNormal = normalize(surfaceNormal);
+    vec3 unitLightVector = normalize(toLightVector);
+
+    // calculate diffuse lighting
+    float nDotLight = dot(unitNormal, unitLightVector);
+    float brightness = max(nDotLight, 0.6);
+    vec3 diffuse = brightness * lightColor;
+
+    // calculate specular lighting
+    vec3 unitVectorToCamera = normalize(toCameraVector);
+    vec3 lightDirection = - unitLightVector;
+    vec3 reflectedLightDirection = reflect(lightDirection, unitNormal);
+    float specularFactor = dot(reflectedLightDirection, unitVectorToCamera);
+    specularFactor = max(specularFactor, 0.6);
+    float dampedFactor = pow(specularFactor, shineDamper);
+    vec3 finalSpecular = dampedFactor * reflectivity * lightColor;
+
+    //calculate color value
+    vec4 textureColor = texture(modelTexture, pass_textureCoordinates); // sample from texture
+    if(textureColor.a < 0.5){ // discards if transparent
+        discard;
+    }
+    out_Color = vec4(diffuse, 1.0) * textureColor + vec4(finalSpecular, 1.0);
+}
